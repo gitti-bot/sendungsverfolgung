@@ -28,7 +28,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // 🔥 Firebase-Konfiguration (ersetze mit deinen Werten!)
+        // 🔥 Firebase-Konfiguration (ersetzen mit deinen Werten!)
         const firebaseConfig = {
             apiKey: "AIzaSyDKSAt2r-Ch9KDb_ft5PkiphE7df5TSA-Y",
             authDomain: "sendungsverfolgung-1d5f6.firebaseapp.com",
@@ -46,21 +46,26 @@
         let scanner = new Instascan.Scanner({ video: document.getElementById('preview') });
 
         scanner.addListener('scan', function (code) {
+            console.log("📦 QR-Code erkannt:", code);
             document.getElementById('sendungsnummer').value = code;
             getTrackingDetails();
         });
 
         function startScanner() {
             Instascan.Camera.getCameras().then(function (cameras) {
-                if (cameras.length > 0) {
-                    let selectedCamera = cameras.length > 1 ? cameras[1] : cameras[0]; // Bevorzuge Rückkamera
-                    scanner.start(selectedCamera);
-                } else {
-                    alert('Keine Kamera gefunden. Erteile die Berechtigung oder nutze einen anderen Browser.');
+                if (cameras.length === 0) {
+                    alert('❌ Keine Kamera gefunden. Erteile die Berechtigung oder nutze einen anderen Browser.');
+                    return;
                 }
+
+                let backCamera = cameras.find(camera => camera.name.toLowerCase().includes("back"));
+                let selectedCamera = backCamera || cameras[0]; // Rückkamera bevorzugen, sonst erste verfügbare
+
+                console.log("📷 Kamera gewählt:", selectedCamera.name);
+                scanner.start(selectedCamera);
             }).catch(function (e) {
                 console.error(e);
-                alert("Fehler beim Zugriff auf die Kamera: " + e.message);
+                alert("⚠️ Fehler beim Zugriff auf die Kamera: " + e.message);
             });
         }
 
