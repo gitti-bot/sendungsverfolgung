@@ -13,7 +13,8 @@
     
     <!-- Video-Element für QR-Code Scanner -->
     <video id="preview" width="100%"></video>
-    
+    <button onclick="startScanner()">📸 Kamera aktivieren</button> <!-- Falls die Kamera nicht startet -->
+
     <input type="text" id="sendungsnummer" placeholder="Sendungsnummer manuell eingeben">
     <button onclick="getTrackingDetails()">Sendung abrufen</button>
 
@@ -23,11 +24,11 @@
     <button onclick="updateTrackingStatus()">Status aktualisieren</button>
 
     <script type="module">
-         // 🔥 Firebase importieren
+        // 🔥 Firebase importieren
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // 🔥 Firebase-Konfiguration (ersetzen mit deinen Werten!)
+        // 🔥 Firebase-Konfiguration (ersetze mit deinen Werten!)
         const firebaseConfig = {
             apiKey: "AIzaSyDKSAt2r-Ch9KDb_ft5PkiphE7df5TSA-Y",
             authDomain: "sendungsverfolgung-1d5f6.firebaseapp.com",
@@ -35,71 +36,79 @@
             storageBucket: "sendungsverfolgung-1d5f6.firebasestorage.app",
             messagingSenderId: "600596742161",
             appId: "600596742161"
-        //measurementId: "G-PK7T5T6GCD"
         };
 
         // 🔥 Firebase initialisieren
-             //firebase.initializeApp(firebaseConfig);
-            //const db = firebase.firestore();
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);    
 
         // 📌 QR-Code Scanner aktivieren
         let scanner = new Instascan.Scanner({ video: document.getElementById('preview') });
+
         scanner.addListener('scan', function (code) {
             document.getElementById('sendungsnummer').value = code;
             getTrackingDetails();
         });
 
-        Instascan.Camera.getCameras().then(function (cameras) {
-            if (cameras.length > 0) {
-                scanner.start(cameras[0]);
-            } else {
-                alert('Keine Kamera gefunden');
-            }
+        function startScanner() {
+            Instascan.Camera.getCameras().then(function (cameras) {
+                if (cameras.length > 0) {
+                    let selectedCamera = cameras.length > 1 ? cameras[1] : cameras[0]; // Bevorzuge Rückkamera
+                    scanner.start(selectedCamera);
+                } else {
+                    alert('Keine Kamera gefunden. Erteile die Berechtigung oder nutze einen anderen Browser.');
+                }
+            }).catch(function (e) {
+                console.error(e);
+                alert("Fehler beim Zugriff auf die Kamera: " + e.message);
+            });
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            startScanner();
         });
 
         // 📌 Sendung aus Firestore abrufen
         async function getTrackingDetails() {
-        let sendungsnummer = document.getElementById('sendungsnummer').value;
-        if (!sendungsnummer) {
-            alert("Bitte eine Sendungsnummer eingeben oder scannen!");
-            return;
-        }
+            let sendungsnummer = document.getElementById('sendungsnummer').value;
+            if (!sendungsnummer) {
+                alert("Bitte eine Sendungsnummer eingeben oder scannen!");
+                return;
+            }
 
-        const docRef = doc(db, "pakete", sendungsnummer);
-        const docSnap = await getDoc(docRef);
+            const docRef = doc(db, "pakete", sendungsnummer);
+            const docSnap = await getDoc(docRef);
 
-        if (docSnap.exists()) {
-            document.getElementById("status").innerText = docSnap.data().status;
-        } else {
-            alert("Sendung nicht gefunden!");
+            if (docSnap.exists()) {
+                document.getElementById("status").innerText = docSnap.data().status;
+            } else {
+                alert("Sendung nicht gefunden!");
+            }
         }
-    }
 
         // 📌 Sendungsstatus aktualisieren
         async function updateTrackingStatus() {
-        let sendungsnummer = document.getElementById('sendungsnummer').value;
-        let neuerStatus = document.getElementById('neuerStatus').value;
-        if (!sendungsnummer || !neuerStatus) {
-            alert("Bitte eine Sendungsnummer und den neuen Status eingeben!");
-            return;
+            let sendungsnummer = document.getElementById('sendungsnummer').value;
+            let neuerStatus = document.getElementById('neuerStatus').value;
+            if (!sendungsnummer || !neuerStatus) {
+                alert("Bitte eine Sendungsnummer und den neuen Status eingeben!");
+                return;
+            }
+
+            const docRef = doc(db, "pakete", sendungsnummer);
+            await updateDoc(docRef, {
+                status: neuerStatus,
+                timestamp: new Date()
+            });
+
+            alert("Status erfolgreich aktualisiert!");
+            getTrackingDetails();
         }
 
-        const docRef = doc(db, "pakete", sendungsnummer);
-        await updateDoc(docRef, {
-            status: neuerStatus,
-            timestamp: new Date()
-        });
-
-        alert("Status erfolgreich aktualisiert!");
-        getTrackingDetails();
-    }
-
-    // 📌 Globale Funktionen für Button-Klicks
-    window.getTrackingDetails = getTrackingDetails;
-    window.updateTrackingStatus = updateTrackingStatus;
+        // 📌 Globale Funktionen für Button-Klicks
+        window.getTrackingDetails = getTrackingDetails;
+        window.updateTrackingStatus = updateTrackingStatus;
+        window.startScanner = startScanner;
     </script>
 </body>
 </html>
-            
